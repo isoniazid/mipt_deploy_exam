@@ -5,7 +5,7 @@ on:
     branches:
       - main
       - develop
-      
+
   workflow_dispatch:
 
 jobs:
@@ -53,6 +53,7 @@ jobs:
       # 7. перемещаем артефакт
       - name: Загружаем артефакт модели
         run: |
+          mkdir -p app
           cp $MODEL_FILE app/model.pkl
 
       # 7.1 загружаем артефакт модели
