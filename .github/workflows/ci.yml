@@ -52,6 +52,9 @@ jobs:
       - name: Загружаем артефакт модели
         run: |
           cp $MODEL_FILE app/model.pkl
+
+      # 7.1 загружаем артефакт модели
+      - name: Перемещаем артефакт
         uses: actions/upload-artifact@v4
         with:
           name: trained-model-${{ env.DEPLOY_ENV }}
