@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - develop
+      
+  workflow_dispatch:
 
 jobs:
   train-build-deploy:
