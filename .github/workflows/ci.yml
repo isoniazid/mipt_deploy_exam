@@ -54,7 +54,7 @@ jobs:
       - name: Загружаем артефакт модели
         run: |
           mkdir -p app
-          cp $MODEL_FILE app/model.pkl
+          cp "$MODEL_FILE" app/model.pkl
 
       # 7.1 загружаем артефакт модели
       - name: Перемещаем артефакт
