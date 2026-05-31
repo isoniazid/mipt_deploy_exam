@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍄🍄🍄 Определитель ядовитости грибов 🍄🍄🍄</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #444444;
+            color: white;
+            margin: 0;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: #1e1e1e;
+            color: white;
+        }
+
+        button {
+            margin-top: 30px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: #4caf50;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .result {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .confidence {
+            margin-top: 12px;
+            text-align: center;
+            font-size: 18px;
+            color: #cccccc;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🍄🍄🍄 Определитель ядовитости грибов 🍄🍄🍄</h1>
+
+    <div class="grid" id="form"></div>
+
+    <button onclick="submitPrediction()">
+        Predict
+    </button>
+
+    <div class="result" id="result"></div>
+    <div class="confidence" id="confidence"></div>
+
+</div>
+
+<script>
+
+const OPTIONS = {
+
+    cap_texture: {
+        label: "Текстура шляпки",
+        values: {
+            a: "гладкая",
+            b: "волокнистая",
+            c: "чешуйчатая",
+            d: "бархатистая",
+            e: "морщинистая",
+            f: "зернистая",
+            g: "кожистая",
+            h: "липкая",
+            i: "матовая",
+            j: "блестящая",
+            k: "сетчатая",
+            l: "пористая",
+            m: "волнистая",
+            n: "пятнистая",
+            o: "ребристая",
+            p: "шероховатая",
+            q: "плотная",
+            r: "рыхлая",
+            s: "слоистая"
+        }
+    },
+
+    spore_pattern: {
+        label: "Расположение спор",
+        values: {
+            a: "равномерное",
+            b: "редкое",
+            c: "плотное",
+            d: "кольцевое",
+            e: "радиальное",
+            f: "пятнистое",
+            g: "полосчатое",
+            h: "сетчатое",
+            i: "кластерное",
+            j: "хаотическое",
+            k: "концентрическое",
+            l: "разреженное",
+            m: "волнообразное",
+            n: "диагональное ",
+            o: "смешанное"
+        }
+    },
+
+    stem_flexibility: {
+        label: "Гибкость ножки",
+        values: {
+            a: "очень жесткая",
+            b: "жесткая",
+            c: "умеренно жесткая",
+            d: "слегка гибкая",
+            e: "гибкая",
+            f: "очень гибкая",
+            g: "упругая",
+            h: "мягкая",
+            i: "ломкая",
+            j: "эластичная"
+        }
+    },
+
+    ring_thickness: {
+        label: "Толщина кольца на ножке",
+        values: {
+            a: "тонкое",
+            b: "среднее",
+            c: "толстое"
+        }
+    },
+
+    cap_shape: {
+        label: "Форма шляпки",
+        values: {
+            b: "колокольчик",
+            c: "конический",
+            x: "выпуклый",
+            f: "плоский",
+            k: "с бугорком",
+            s: "утопленный"
+        }
+    },
+
+    cap_surface: {
+        label: "Поверхность шляпки",
+        values: {
+            f: "волокнистая",
+            g: "канавки",
+            y: "чешуйчатая",
+            s: "гладкая"
+        }
+    },
+
+    cap_color: {
+        label: "Цвет шляпки",
+        values: {
+            n: "коричневый",
+            b: "желтовато-коричневый",
+            c: "корица",
+            g: "серый",
+            r: "зелёный",
+            p: "розовый",
+            u: "фиолетовый",
+            e: "красный",
+            w: "белый",
+            y: "желтый"
+        }
+    },
+
+    stalk_shape: {
+        label: "Форма ножки",
+        values: {
+            e: "утолщение",
+            t: "сужение"
+        }
+    },
+
+    veil_type: {
+        label: "Тип завесы",
+        values: {
+            p: "частичная",
+            u: "универсальная"
+        }
+    },
+
+    veil_color: {
+        label: "Цвет завесы",
+        values: {
+            n: "коричневый",
+            o: "оранжевый",
+            w: "белый",
+            y: "жёлтый"
+        }
+    },
+
+    ring_number: {
+        label: "Число колец",
+        values: {
+            n: "нет",
+            o: "одно",
+            t: "два"
+        }
+    },
+
+    population: {
+        label: "Тип популяции",
+        values: {
+            a: "многочисленная",
+            c: "сгруппированная",
+            n: "обычная",
+            s: "рассеянная",
+            v: "несколько",
+            y: "одиночная"
+        }
+    },
+
+    habitat: {
+        label: "Среда обитания",
+        values: {
+            g: "трава",
+            l: "листья",
+            m: "луга",
+            p: "тропинки",
+            u: "город",
+            w: "отходы",
+            d: "леса"
+        }
+    }
+
+};
+
+const form = document.getElementById('form');
+
+Object.entries(OPTIONS).forEach(([key, config]) => {
+
+    const field = document.createElement('div');
+    field.className = 'field';
+
+    const label = document.createElement('label');
+    label.innerText = config.label;
+
+    const select = document.createElement('select');
+    select.id = key;
+
+    Object.entries(config.values).forEach(([value, text]) => {
+
+        const option = document.createElement('option');
+
+        option.value = value;
+        option.innerText = text;
+
+        select.appendChild(option);
+
+    });
+
+    field.appendChild(label);
+    field.appendChild(select);
+
+    form.appendChild(field);
+
+});
+
+async function submitPrediction() {
+
+    const payload = {};
+
+    Object.keys(OPTIONS).forEach(key => {
+        payload[key] = document.getElementById(key).value;
+    });
+
+    const response = await fetch('/predict', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    document.getElementById('result').innerText =
+        result.prediction;
+
+    document.getElementById('confidence').innerText =
+        'Вероятность того, что гриб ядовитый: ' + result.confidence;
+}
+
+</script>
+
+</body>
+</html>

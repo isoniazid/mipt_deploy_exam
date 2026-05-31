@@ -1,0 +1,108 @@
+name: ML Backend CI/CD Pipeline (Blue-Green)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  train-build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. checkout
+      - name: Проверка репозитория
+        uses: actions/checkout@v4
+
+      # 2. определяем, у нас зеленый или синий инстанс
+      - name: Set deployment environment
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "develop" ]; then
+            echo "DEPLOY_ENV=green" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_ENV=blue" >> $GITHUB_ENV
+          fi
+
+          echo "Selected environment: $DEPLOY_ENV"
+
+      # 3. ставим питон
+      - name: Установка Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # 4. устанавливаем зависимости
+      - name: Установка зависимостей
+        run: |
+          pip install -r pipeline/requirements.txt
+
+      # 5. запускаем обучение
+      - name: Обучение
+        run: |
+          python pipeline/pipeline.py
+
+      # 6. берем артефакт
+      - name: Ищем pkl
+        run: |
+          MODEL_FILE=$(ls -t *.pkl | head -n 1)
+          echo "MODEL_FILE=$MODEL_FILE" >> $GITHUB_ENV
+
+      # 7. перемещаем артефакт
+      - name: Загружаем артефакт модели
+        run: |
+          cp $MODEL_FILE app/model.pkl
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model-${{ env.DEPLOY_ENV }}
+          path: app/model.pkl
+
+      # 8. Установка зависимостей приложения
+      - name: Устанавливаем зависимости приложения
+        run: |
+          pip install -r app/requirements.txt
+
+      # 9. Собираем образ (В зависимости от ветки зеленый или синий)
+      - name: Собираем образ
+        run: |
+          docker build -t mushroom-api:${DEPLOY_ENV} ./app
+          docker tag mushroom-api:${DEPLOY_ENV} mushroom-api:latest
+
+      # 10. Сохраняем образ
+      - name: Сохраняем докер образ
+        run: |
+          docker save mushroom-api:${DEPLOY_ENV} -o mushroom-api-${DEPLOY_ENV}.tar
+
+      # 11. Заливаем артефакты
+      - name: Добавляем образ в артефакты
+        uses: actions/upload-artifact@v4
+        with:
+          name: mushroom-api-image-${{ env.DEPLOY_ENV }}
+          path: mushroom-api-${{ env.DEPLOY_ENV }}.tar
+
+      # 12. Запускаем контейнер
+      - name: Run container
+        run: |
+          docker run -d -p 8000:8000 --name mushroom-api-${DEPLOY_ENV} mushroom-api:${DEPLOY_ENV}
+
+      # 13. Проверка здоровья
+      - name: Wait for API startup
+        run: sleep 10
+
+      - name: Healthcheck
+        run: |
+          curl --fail http://localhost:8000/health
+
+      # 14. Заглушка для заливки на прод
+      - name: Deploy to production (Blue/Green mock)
+        run: |
+          echo "======================================"
+          echo "DEPLOY STRATEGY: BLUE/GREEN"
+          echo "Triggered by branch: $GITHUB_REF_NAME"
+          echo "Selected environment: $DEPLOY_ENV"
+          echo ""
+          echo "Routing traffic to ${DEPLOY_ENV} environment..."
+          echo "Running smoke tests..."
+          echo "Rollback plan ready..."
+          echo "STATUS: SUCCESS (mock deployment)"
+          echo "======================================"
